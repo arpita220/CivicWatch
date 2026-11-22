@@ -191,13 +191,20 @@ vercel --prod
 - Create "Web Service"
 - Connect GitHub repository
 - Set root path: `backend`
-- Set environment variables
+- Set build command to `npm install` and start command to `npm start`
+- Set backend environment variables: `MONGODB_URI` (Atlas URI), `JWT_SECRET` (long random secret), `ADMIN_PASSWORD` (unique random password with at least 16 characters), and `FRONTEND_URL` (the exact public URL of your Render static site, with no trailing slash)
+- Do not set `PORT` manually; Render provides it
 - Deploy automatically
 
 **2. Frontend on Render**
 - Create "Static Site"
-- Set root path: `frontend/build`
+- Connect the same GitHub repository and set root directory to `frontend`
+- Set build command to `npm install && npm run build` and publish directory to `build`
 - Connect to backend service
+- Add `REACT_APP_API_URL` as a build environment variable with the backend service URL ending in `/api` (for example, `https://your-backend.onrender.com/api`)
+- Redeploy the static site after changing this variable; React embeds it at build time
+
+After deployment, check `https://your-backend.onrender.com/health`. It should report `"database": "connected"` before testing sign-in.
 
 ### Option 3: Cloud Deployment (AWS/GCP/Azure)
 

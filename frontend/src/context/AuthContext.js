@@ -12,8 +12,11 @@ const getRegistrationErrorMessage = (error) => {
   if (serverMessage === 'CivicWatch user already exists' || serverMessage === 'An account with this email already exists.') {
     return 'An account with this email already exists. Sign in or use a different email.';
   }
-  if (serverMessage.startsWith('Invalid admin secret code') || serverMessage.startsWith('The admin code is incorrect')) {
-    return 'The admin code is incorrect. Please check it or contact your administrator.';
+  if (error.response?.status === 403 || error.response?.status === 409) {
+    return serverMessage || 'This administrator account cannot be registered.';
+  }
+  if (serverMessage === 'Invalid administrator credentials.') {
+    return serverMessage;
   }
   if (error.response?.status === 400) {
     return 'We could not create your account with those details. Please check them and try again.';
@@ -63,19 +66,18 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       return {
         success: false,
-        message: error.response?.data?.message || 'Login failed'
+        message: error.response?.data?.message || error.message || 'Could not reach the sign-in service.'
       };
     }
   };
 
-  const register = async (name, email, password, role = 'citizen', adminCode = '') => {
+  const register = async (name, email, password, role = 'citizen') => {
     try {
       const response = await api.post('/auth/register', {
         name,
         email,
         password,
         role,
-        adminCode,
       });
       
       const { token, user } = response.data;

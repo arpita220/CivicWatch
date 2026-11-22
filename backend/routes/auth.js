@@ -2,9 +2,11 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer');
+const crypto = require('crypto');
 const User = require('../models/User');
 
 const router = express.Router();
+const ADMIN_EMAIL = 'admin@civicwatch.com';
 
 // Email helper function
 const sendEmail = async (to, subject, text, html) => {
@@ -59,7 +61,8 @@ const sendEmail = async (to, subject, text, html) => {
 // Register
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password, role, adminCode } = req.body;
+    const { name, email, password, role } = req.body;
+    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
 
     if (User.db.readyState !== 1) {
       return res.status(503).json({
@@ -73,26 +76,45 @@ router.post('/register', async (req, res) => {
       });
     }
 
+    if (normalizedEmail === ADMIN_EMAIL && role !== 'admin') {
+      return res.status(403).json({ message: 'This email is reserved for the CivicWatch administrator.' });
+    }
+
+    if (role === 'admin') {
+      if (normalizedEmail !== ADMIN_EMAIL) {
+        return res.status(403).json({ message: 'Admin registration is restricted to the designated administrator account.' });
+      }
+
+      const configuredAdminPassword = process.env.ADMIN_PASSWORD;
+      if (!configuredAdminPassword || configuredAdminPassword.length < 16) {
+        return res.status(503).json({ message: 'Admin registration is not configured. Please contact the system administrator.' });
+      }
+
+      const submittedPassword = typeof password === 'string' ? Buffer.from(password) : Buffer.alloc(0);
+      const expectedPassword = Buffer.from(configuredAdminPassword);
+      if (submittedPassword.length !== expectedPassword.length ||
+          !crypto.timingSafeEqual(submittedPassword, expectedPassword)) {
+        return res.status(400).json({ message: 'Invalid administrator credentials.' });
+      }
+
+      if (await User.exists({ role: 'admin' })) {
+        return res.status(409).json({ message: 'The administrator account has already been registered.' });
+      }
+    }
+
     // Check if user exists
-    let user = await User.findOne({ email });
+    let user = await User.findOne({ email: normalizedEmail });
     if (user) {
       return res.status(400).json({ message: 'An account with this email already exists.' });
     }
 
     // Store citizen accounts as 'user'; the schema only allows 'user' or 'admin'.
-    let assignedRole = 'user';
-    if (role === 'admin') {
-      const expectedCode = process.env.ADMIN_SECRET_CODE || 'CIVIC_ADMIN_2024';
-      if (!adminCode || adminCode.trim() !== expectedCode) {
-        return res.status(400).json({ message: 'The admin code is incorrect. Please check it or contact your administrator.' });
-      }
-      assignedRole = 'admin';
-    }
+    const assignedRole = role === 'admin' ? 'admin' : 'user';
 
     // Create new user
     user = new User({
       name,
-      email,
+      email: normalizedEmail,
       password,
       role: assignedRole
     });
@@ -144,17 +166,28 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+
+    if (!normalizedEmail || typeof password !== 'string' || !password) {
+      return res.status(400).json({ message: 'Email and password are required.' });
+    }
+
+    if (User.db.readyState !== 1 || !process.env.JWT_SECRET) {
+      return res.status(503).json({ message: 'Sign in is temporarily unavailable. Please try again later.' });
+    }
 
     // Check if user exists
-    let user = await User.findOne({ email });
+    const escapedEmail = normalizedEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const user = await User.findOne({ email: normalizedEmail }) ||
+      await User.findOne({ email: { $regex: `^${escapedEmail}$`, $options: 'i' } });
     if (!user) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ message: 'Invalid email or password.' });
     }
 
     // Check password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ message: 'Invalid email or password.' });
     }
 
     // Create JWT token
@@ -165,18 +198,14 @@ router.post('/login', async (req, res) => {
       }
     };
 
-    jwt.sign(
-      payload,
-      process.env.JWT_SECRET,
-      { expiresIn: '24h' },
-      (err, token) => {
-        if (err) throw err;
-        res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
-      }
-    );
+    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '24h' });
+    res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('CivicWatch server error');
+    console.error('[Login] Failed:', err.message);
+    if (err.name === 'MongoServerSelectionError' || err.name === 'MongoNetworkError' || /buffering timed out/i.test(err.message)) {
+      return res.status(503).json({ message: 'Sign in is temporarily unavailable. Please try again later.' });
+    }
+    res.status(500).json({ message: 'Sign in is temporarily unavailable. Please try again later.' });
   }
 });
 

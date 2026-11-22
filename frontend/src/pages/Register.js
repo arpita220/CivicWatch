@@ -9,9 +9,7 @@ const Register = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    adminCode: '',
   });
-  const [showAdminCode, setShowAdminCode] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -44,8 +42,8 @@ const Register = () => {
   const handleRoleSelect = (role) => {
     setSelectedRole(role);
     setError('');
-    if (role === 'citizen') {
-      setFormData(prev => ({ ...prev, adminCode: '' }));
+    if (role === 'admin') {
+      setFormData(prev => ({ ...prev, email: 'admin@civicwatch.com' }));
     }
   };
 
@@ -60,14 +58,9 @@ const Register = () => {
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters');
-      setLoading(false);
-      return;
-    }
-
-    if (isAdmin && !formData.adminCode.trim()) {
-      setError('Admin secret code is required to register as Admin');
+    const minimumPasswordLength = isAdmin ? 16 : 6;
+    if (formData.password.length < minimumPasswordLength) {
+      setError(`Password must be at least ${minimumPasswordLength} characters`);
       setLoading(false);
       return;
     }
@@ -76,8 +69,7 @@ const Register = () => {
       formData.name,
       formData.email,
       formData.password,
-      selectedRole,
-      formData.adminCode
+      selectedRole
     );
 
     if (result.success) {
@@ -216,7 +208,8 @@ const Register = () => {
                   }}>email</span>
                   <input
                     type="email" name="email" required
-                    placeholder="Enter your email"
+                    placeholder={isAdmin ? 'admin@civicwatch.com' : 'Enter your email'}
+                    readOnly={isAdmin}
                     value={formData.email} onChange={handleChange}
                     style={inputStyle}
                     onFocus={e => { e.target.style.border = `1.5px solid ${theme.ring}`; e.target.style.boxShadow = `0 0 0 3px ${theme.primaryLight}`; }}
@@ -276,45 +269,18 @@ const Register = () => {
                 </div>
               </div>
 
-              {/* Admin Secret Code — only when Admin tab selected */}
+              {/* Admin account creation is restricted by the backend to the configured admin password. */}
               {isAdmin && (
                 <div style={{
                   background: '#faf5ff', border: '1.5px solid #ddd6fe',
                   borderRadius: 12, padding: 16
                 }}>
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: '#7c3aed', marginBottom: 4 }}>
-                    🔑 Admin Secret Code <span style={{ color: '#ef4444' }}>*</span>
+                    Administrator account
                   </label>
                   <p style={{ color: '#6d28d9', fontSize: 11, marginBottom: 10, lineHeight: 1.5 }}>
-                    Contact your system administrator to get this code. Without it, admin registration is not allowed.
+                    Only the designated administrator can register. Use the administrator password configured for this deployment.
                   </p>
-                  <div style={{ position: 'relative' }}>
-                    <input
-                      type={showAdminCode ? 'text' : 'password'} name="adminCode"
-                      placeholder="Enter admin secret code"
-                      value={formData.adminCode} onChange={handleChange}
-                      style={{
-                        ...inputStyle,
-                        paddingLeft: 14,
-                        paddingRight: 42,
-                        border: '1.5px solid #ddd6fe',
-                        background: '#f5f3ff',
-                        color: '#7c3aed',
-                        letterSpacing: showAdminCode ? 'normal' : '3px'
-                      }}
-                      onFocus={e => { e.target.style.border = '1.5px solid #7c3aed'; e.target.style.boxShadow = '0 0 0 3px #f5f3ff'; }}
-                      onBlur={e => { e.target.style.border = '1.5px solid #ddd6fe'; e.target.style.boxShadow = 'none'; }}
-                    />
-                    <button type="button" onClick={() => setShowAdminCode(!showAdminCode)} style={{
-                      position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-                      background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-                      color: '#7c3aed', display: 'flex'
-                    }}>
-                      <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-                        {showAdminCode ? 'visibility_off' : 'visibility'}
-                      </span>
-                    </button>
-                  </div>
                 </div>
               )}
 

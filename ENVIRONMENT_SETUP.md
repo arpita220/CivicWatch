@@ -1,98 +1,24 @@
-# Environment Variables Setup - COMPLETED ✅
+# Environment Setup
 
-## 📋 What Was Created:
+Keep credentials out of source files, scripts, and documentation. Use an ignored local `.env` file for development and the service's Environment settings for deployment.
 
-### 1. .gitignore File
-- ✅ Created comprehensive `.gitignore` file
-- ✅ Protects sensitive files from being committed to GitHub
-- ✅ Includes node_modules, .env files, builds, logs, etc.
+## Backend
 
-### 2. Environment Export Scripts
-- ✅ Created `setup-env.bat` (Batch script for Windows CMD)
-- ✅ Created `setup-env.ps1` (PowerShell script)
-- ✅ Both scripts export all necessary environment variables
+Create `backend/.env` for local development:
 
-### 3. System Environment Variables
-- ✅ MONGODB_URI set permanently
-- ✅ JWT_SECRET set permanently  
-- ✅ GOOGLE_MAPS_API_KEY set permanently
-- ✅ CLOUDINARY_CLOUD_NAME set permanently
-- ✅ CLOUDINARY_API_KEY set permanently
-
-## 🔧 Variables Exported:
-
-```bash
-MONGODB_URI=mongodb+srv://vinodrathnam78:Zerodhaclone00@zerodhaclonecluster.2eswecw.mongodb.net/smartcity
-JWT_SECRET=ab32031422f4916bdfff8f74923b7f80f89257d5786822c9642bdbb85b1ae9bc385847a882e4840e29041da7f6aaa0405ebd4c5032688df1ff1596914e26e4a0
-GOOGLE_MAPS_API_KEY=AIzaSyARRqi17fOiIckj1w-pCNDSagPyhmhgCsQ
-CLOUDINARY_CLOUD_NAME=dxyp1g0l2
-CLOUDINARY_API_KEY=226581164349814
+```env
+MONGODB_URI=<your-local-or-Atlas-connection-string>
+JWT_SECRET=<a-long-random-secret>
+ADMIN_PASSWORD=<a-unique-random-password-at-least-16-characters>
+FRONTEND_URL=http://localhost:3000
 ```
 
-## 🚀 Next Steps for Deployment:
+The `.env` file is ignored by Git. Do not copy real values into this guide or into setup scripts.
 
-### 1. Restart Terminal/IDE
-- Close and reopen your terminal/IDE
-- New environment variables will be available system-wide
+## Render
 
-### 2. Update Production Values
-- For production deployment, update these values:
-  - MongoDB Atlas connection string
-  - Generate new JWT secret
-  - Keep Google Maps API key (same)
+On the backend Web Service, configure `MONGODB_URI`, `JWT_SECRET`, `ADMIN_PASSWORD`, and `FRONTEND_URL`. Render supplies `PORT`; do not hard-code it.
 
-### 3. Deploy
-- Your environment is now ready for deployment
-- Use the DEPLOYMENT.md guide for step-by-step instructions
+On the frontend Static Site, configure `REACT_APP_API_URL` as the backend's public URL ending in `/api`. This variable is embedded when the static site is built, so redeploy after changing it. See [DEPLOYMENT.md](./DEPLOYMENT.md) for the service setup.
 
-## 📞 How to Use:
-
-### For Current Session:
-```bash
-# Environment variables are now available system-wide
-# Your backend will automatically pick them up
-cd backend
-npm start
-```
-
-### For Future Sessions:
-```bash
-# Option 1: Use setup script
-setup-env.bat    # or setup-env.ps1
-
-# Option 2: Variables are permanent now
-# Just start your terminal and run commands
-```
-
-## ✅ Verification:
-
-To verify environment variables are set:
-```cmd
-echo %MONGODB_URI%
-echo %GOOGLE_MAPS_API_KEY%
-```
-
-Or in PowerShell:
-```powershell
-$env:MONGODB_URI
-$env:GOOGLE_MAPS_API_KEY
-```
-
-## 🛡️ Security Notes:
-
-- ✅ `.gitignore` prevents sensitive data from being committed
-- ✅ Environment variables are set at system level
-- ⚠️ For production, generate new JWT secret
-- ⚠️ Consider using different values for production
-
----
-
-**Status: READY FOR DEPLOYMENT! 🚀**
-
-Your CivicWatch project now has:
-1. ✅ Proper Git setup with .gitignore
-2. ✅ Environment variables configured system-wide
-3. ✅ Deployment guide (DEPLOYMENT.md)
-4. ✅ All necessary scripts and documentation
-
-You're ready to deploy to any platform!
+The former environment setup scripts contained credentials and have been removed. Rotate any credentials that were previously stored in those scripts or in older revisions of this repository.

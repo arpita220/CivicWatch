@@ -14,6 +14,11 @@ const server = http.createServer(app);
 const PORT = process.env.PORT || 3001;
 
 // ─── CORS Config ──────────────────────────────────────────────────────────────
+const configuredOrigins = (process.env.FRONTEND_URL || '')
+  .split(',')
+  .map((origin) => origin.trim().replace(/\/+$/, ''))
+  .filter(Boolean);
+
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:3001',
@@ -21,7 +26,8 @@ const allowedOrigins = [
   'http://127.0.0.1:3000',
   'http://127.0.0.1:3001',
   'https://civicwatch-1-xv2a.onrender.com',
-  'https://civicwatch-tjjo.onrender.com'
+  'https://civicwatch-tjjo.onrender.com',
+  ...configuredOrigins
 ];
 
 const corsOptions = {
@@ -79,15 +85,6 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// ─── Database ─────────────────────────────────────────────────────────────────
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => {
-    console.log('MongoDB connected successfully');
-    // Start SLA escalation service after DB is ready
-    startSlaService(io);
-  })
-  .catch((err) => console.log('MongoDB connection error:', err));
-
 // ─── Routes ───────────────────────────────────────────────────────────────────
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/issues', require('./routes/issues'));
@@ -97,17 +94,39 @@ app.get('/', (req, res) => {
 });
 
 app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'OK',
-    message: 'CivicWatch API is healthy',
+  const databaseReady = mongoose.connection.readyState === 1;
+  res.status(databaseReady ? 200 : 503).json({
+    status: databaseReady ? 'OK' : 'Unavailable',
+    message: databaseReady ? 'CivicWatch API is ready' : 'CivicWatch database is unavailable',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    database: databaseReady ? 'connected' : 'disconnected'
   });
 });
 
-// ─── Start Server ─────────────────────────────────────────────────────────────
-server.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`Socket.io is active and listening`);
+const startServer = async () => {
+  if (!process.env.MONGODB_URI) {
+    throw new Error('MONGODB_URI must be configured.');
+  }
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET must be configured.');
+  }
+
+  await mongoose.connect(process.env.MONGODB_URI);
+  console.log('MongoDB connected successfully');
+  startSlaService(io);
+
+  server.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log('Socket.io is active and listening');
+  });
+};
+
+startServer().catch(async (err) => {
+  console.error('[Startup] CivicWatch could not start:', err.message);
+  await mongoose.disconnect().catch((disconnectError) => {
+    console.error('[Startup] MongoDB disconnect failed:', disconnectError.message);
+  });
+  process.exitCode = 1;
 });

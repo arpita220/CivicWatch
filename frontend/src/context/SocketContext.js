@@ -7,14 +7,14 @@ const SocketContext = createContext(null);
 export const useSocket = () => useContext(SocketContext);
 
 const getSocketUrl = () => {
-  if (process.env.REACT_APP_API_URL) {
-    // Strip /api path — socket connects to the root
-    return process.env.REACT_APP_API_URL.replace('/api', '');
+  const configuredApiUrl = process.env.REACT_APP_API_URL?.trim();
+  if (configuredApiUrl) {
+    return configuredApiUrl.replace(/\/api\/?$/, '').replace(/\/+$/, '');
   }
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     return 'http://localhost:3001';
   }
-  return 'https://fix-my-city-udyu.onrender.com';
+  return window.location.origin;
 };
 
 export const SocketProvider = ({ children }) => {

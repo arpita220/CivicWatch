@@ -57,11 +57,14 @@ Create a `.env` file in the `backend` directory:
 ```env
 MONGODB_URI=mongodb://localhost:27017/civicwatch
 JWT_SECRET=your_jwt_secret_key_here
+ADMIN_PASSWORD=use_a_unique_random_password_at_least_16_characters_long
 CLOUDINARY_CLOUD_NAME=your_cloudinary_name
 CLOUDINARY_API_KEY=your_cloudinary_key
 CLOUDINARY_API_SECRET=your_cloudinary_secret
 GOOGLE_MAPS_API_KEY=your_google_maps_api_key
 ```
+
+The one-time administrator registration is restricted to `admin@civicwatch.com` and requires the backend-only `ADMIN_PASSWORD` value. Set a unique, randomly generated password of at least 16 characters in the backend environment (and in Render for production); do not use `admin123`. Once an administrator account exists, further admin registrations are rejected. The admin seed script uses the same variable and does not reset an existing account's password.
 
 ### 4. Start Backend Server
 ```bash
