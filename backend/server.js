@@ -20,8 +20,8 @@ const allowedOrigins = [
   'http://localhost:3002',
   'http://127.0.0.1:3000',
   'http://127.0.0.1:3001',
-  'https://fix-my-city-lac.vercel.app',
-  'https://fix-my-city-udyu.onrender.com'
+  'https://civicwatch-1-xv2a.onrender.com',
+  'https://civicwatch-tjjo.onrender.com'
 ];
 
 const corsOptions = {
