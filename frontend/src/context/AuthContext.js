@@ -15,6 +15,12 @@ const getRegistrationErrorMessage = (error) => {
   if (error.response?.status === 403 || error.response?.status === 409) {
     return serverMessage || 'This administrator account cannot be registered.';
   }
+  if (error.response?.status === 503 && serverMessage.includes('Admin registration is not configured')) {
+    return 'Admin registration is not configured. Set ADMIN_PASSWORD on the backend Render service to a unique password of at least 16 characters.';
+  }
+  if (error.response?.status === 503) {
+    return 'Registration service unavailable. Check the backend health endpoint and its MONGODB_URI and JWT_SECRET settings.';
+  }
   if (serverMessage === 'Invalid administrator credentials.') {
     return serverMessage;
   }
